@@ -176,6 +176,23 @@ function transformApiPayload(payload) {
     .join('\n');
   const applianceBreakdownTitle = `Top 3 appliances this month:\n${applianceBreakdownText}`;
 
+  const getStandbyActionText = () => {
+    const leadName = String(topAppliances[0]?.name || '').toLowerCase();
+    if (leadName.includes('air')) {
+      return 'Set AC to 25-26C before sleep and add a timer to switch off after 1-2 hours.';
+    }
+    if (leadName.includes('kitchen')) {
+      return 'Switch off kitchen appliances at the wall after dinner and avoid overnight warm/keep modes.';
+    }
+    if (leadName.includes('fridge') || leadName.includes('refridgeration')) {
+      return 'Check fridge door seals, reduce door-open time, and keep temperature at efficient settings (around 3-5C).';
+    }
+    if (leadName.includes('heater')) {
+      return 'Use a water-heater timer so it only runs before shower windows, not all night.';
+    }
+    return 'Tonight, switch off TV/router and unplug idle chargers at the power socket before bed.';
+  };
+
   const aiInsights = [
     {
       id: 'insight-1',
@@ -184,7 +201,7 @@ function transformApiPayload(payload) {
       urgency: standbyMonthlyCost >= 12 ? 'high' : 'medium',
       headline: `Your devices are quietly eating S$${standbyMonthlyCost.toFixed(2)} monthly while you sleep`,
       body: `Between 2-4 AM, your home still uses ${standbyKwhPerSlot.toFixed(2)} kWh every half hour - that's like leaving a ${Math.round(standbyKwhPerSlot * 2000)}W appliance running all night. This phantom power adds up to ${Math.max(1, Math.round((standbyMonthlyCost / Math.max(1, Number(r.est_monthly_bill || 1))) * 100))}% of your monthly bill, which is higher than most ${district} HDB households.\n\nWhat's using power at night:\n${applianceBreakdownText}`,
-      actionText: 'Tonight, switch off your TV and router at the power socket before bed',
+      actionText: getStandbyActionText(),
       estimatedSaving: Number(r.potential_standby_saving || standbyMonthlyCost * 0.6),
       applianceChart: topAppliances,
     },

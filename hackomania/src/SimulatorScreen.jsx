@@ -134,7 +134,20 @@ const FullApplianceBreakdown = ({ appliances }) => {
 };
 
 const SimulatorScreen = ({ data, onNavigate }) => {
-    const halfHourlyUsageData = Array.isArray(data?.halfHourlyUsageData) ? data.halfHourlyUsageData : [];
+    const halfHourlyUsageDataRaw = Array.isArray(data?.halfHourlyUsageData) ? data.halfHourlyUsageData : [];
+    const halfHourlyUsageData = halfHourlyUsageDataRaw.map((row, idx) => {
+        const time = typeof row?.time === 'string'
+            ? row.time
+            : typeof row?.label === 'string'
+                ? row.label
+                : `${String(Math.floor(idx / 2)).padStart(2, '0')}:${idx % 2 === 0 ? '00' : '30'}`;
+        const kWh = Number(row?.kWh ?? row?.value ?? 0);
+        return {
+            ...row,
+            time,
+            kWh: Number.isFinite(kWh) ? kWh : 0,
+        };
+    });
     const applianceBreakdown = Array.isArray(data?.applianceBreakdown) ? data.applianceBreakdown : [];
     const [acTemp, setAcTemp] = useState(23);
     const [unplugStandby, setUnplugStandby] = useState(false);
@@ -146,11 +159,13 @@ const SimulatorScreen = ({ data, onNavigate }) => {
     const NON_AC_TOTAL_KWH = 45 + 38 + 24 + 18 + 15 + 12; // 152 kWh
     const tvFraction = TV_MEDIA_KWH / NON_AC_TOTAL_KWH;
 
-    const nighttimeSlots = halfHourlyUsageData.filter(d => {
-        const [h] = d.time.split(':').map(Number);
+    const nighttimeSlots = halfHourlyUsageData.filter((d) => {
+        const [hourText] = String(d.time || '').split(':');
+        const h = Number(hourText);
+        if (!Number.isFinite(h)) return false;
         return h >= 23 || h < 7;
     });
-    const totalNightKwh = nighttimeSlots.reduce((s, d) => s + d.kWh, 0);
+    const totalNightKwh = nighttimeSlots.reduce((s, d) => s + Number(d.kWh || 0), 0);
     const standbyKwhPerNight = parseFloat((totalNightKwh * tvFraction).toFixed(2));
     const standbyKwhPerMonth = parseFloat((standbyKwhPerNight * 30).toFixed(1));
     const standbyDollarsPerMonth = parseFloat((standbyKwhPerMonth * 0.2671).toFixed(2));

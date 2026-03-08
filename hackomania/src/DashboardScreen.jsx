@@ -1,28 +1,6 @@
 import React from 'react';
-import { BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, ReferenceLine } from 'recharts';
-import { Zap, TrendingUp, TrendingDown, AlertTriangle, DollarSign, Droplet, Flame, Wind, Lightbulb } from 'lucide-react';
-
-const MetricCard = ({ icon: Icon, label, value, unit, color = '#00a8b8' }) => {
-    return (
-        <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.75rem',
-            padding: '0.75rem',
-            backgroundColor: 'var(--bg-tertiary)',
-            borderRadius: '10px',
-            borderLeft: `4px solid ${color}`,
-        }}>
-            <div style={{ color, fontSize: '1.3rem', display: 'flex' }}>
-                <Icon size={20} />
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{label}</span>
-                <span style={{ fontSize: '0.95rem', fontWeight: '700', color: 'var(--text-primary)' }}>{value} {unit}</span>
-            </div>
-        </div>
-    );
-};
+import { BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, ReferenceLine, Brush } from 'recharts';
+import { Zap, TrendingUp, TrendingDown, AlertTriangle, DollarSign, Droplet, Flame, Wind, Lightbulb, Info } from 'lucide-react';
 
 const DashboardScreen = ({ data }) => {
     const dashboardMetrics = data?.dashboardMetrics || {
@@ -30,7 +8,6 @@ const DashboardScreen = ({ data }) => {
         lastMonthUsage: 0,
         percentageChange: 0,
         peakPeriod: '6:00 PM - 10:00 PM',
-        energyScore: 65,
         percentile: 50,
     };
     const dailyUsageData = Array.isArray(data?.dailyUsageData) ? data.dailyUsageData : [];
@@ -51,40 +28,20 @@ const DashboardScreen = ({ data }) => {
     const flatType = String(data?.householdBenchmark?.flatType || 'HDB flat');
     const avgFlatSpend = Number(data?.householdBenchmark?.avgMonthlySpend || 0);
 
-    // Score color based on value
-    const getScoreColor = (score) => {
-        if (score >= 800) return '#0c9f96';
-        if (score >= 650) return '#2f7fb3';
-        if (score >= 500) return '#2f7fb3';
-        return '#bb4a56';
+    const percentageChange = Number(dashboardMetrics.percentageChange || 0);
+    const pointsTone = (points) => {
+        if (points >= 1200) return '#1dd1a1';
+        if (points >= 700) return '#22d3ee';
+        return '#f4c95d';
     };
 
     return (
         <div className="flex-col gap-6 p-4 animate-fade-in">
-            {/* Key Metrics Grid */}
-            <div className="glass-panel p-4">
-                <span className="h3" style={{ marginBottom: '1rem' }}>Key Metrics (Last 30 Days)</span>
-                <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-                    gap: '0.75rem',
-                }}>
-                    <MetricCard icon={Zap} label="Monthly use" value={dashboardMetrics.currentMonthUsage} unit="kWh" color="#1cc3cf" />
-                    <MetricCard icon={TrendingUp} label="Daily avg" value={avgDailyKwh} unit="kWh" color="#00a8b8" />
-                    <MetricCard icon={Wind} label="Today" value={todayUsage} unit="kWh" color="#7ebcf1" />
-                    <MetricCard icon={DollarSign} label="Est. bill" value={`S$${estimatedBill}`} unit="" color="#57d4cb" />
-                    <MetricCard icon={Flame} label="Peak ratio" value={peakRatio} unit="%" color="#bb4a56" />
-                    <MetricCard icon={Droplet} label="Standby" value={`S$${standbyCost}`} unit="/mo" color="#ea7d88" />
-                    <MetricCard icon={Lightbulb} label="Weekend" value={weekendUplift} unit="%" color="#68b4e0" />
-                    <MetricCard icon={Zap} label="Tariff" value={tariff} unit="SGD/kWh" color="#0c9f96" />
-                </div>
-            </div>
-
-            {/* User Points */}
+            {/* Reward Points */}
             <div className="glass-panel p-6 flex-row items-center justify-between">
                 <div className="flex-col gap-2">
-                    <span className="h3">User Points</span>
-                    <span className="small-text">Points are awarded automatically from positive data changes.</span>
+                    <span className="h3">Rewards Points</span>
+                    <span className="small-text">Points are awarded automatically from positive usage improvements.</span>
                 </div>
                 <div style={{
                     display: 'flex',
@@ -93,10 +50,10 @@ const DashboardScreen = ({ data }) => {
                     width: 80,
                     height: 80,
                     borderRadius: '50%',
-                    border: `5px solid ${getScoreColor(userPoints)}`,
+                    border: `5px solid ${pointsTone(userPoints)}`,
                     fontSize: 28,
                     fontWeight: 'bold',
-                    color: getScoreColor(userPoints),
+                    color: pointsTone(userPoints),
                     position: 'relative',
                 }}>
                     {userPoints}
@@ -122,13 +79,13 @@ const DashboardScreen = ({ data }) => {
                 </p>
             </div>
 
-            {/* 24-Hour Chart - NO BRUSH */}
+            {/* 24-Hour Chart */}
             <div className="glass-panel">
                 <div className="flex-row justify-between items-center mb-6">
                     <span className="h3">24-Hour Monitor</span>
                     <span className="small-text">Half-Hourly Intervals</span>
                 </div>
-                <div style={{ width: '100%', height: 250 }}>
+                <div style={{ width: '100%', height: 320 }}>
                     <ResponsiveContainer>
                         <LineChart data={halfHourlyUsageData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
                             <XAxis
@@ -157,10 +114,18 @@ const DashboardScreen = ({ data }) => {
                             <Line
                                 type="monotone"
                                 dataKey="kWh"
-                                stroke="var(--accent-primary)"
-                                strokeWidth={2}
+                                stroke="#5eead4"
+                                strokeWidth={4}
                                 dot={false}
                                 isAnimationActive={true}
+                            />
+                            <Brush
+                                dataKey="time"
+                                height={24}
+                                stroke="#4d6b8d"
+                                travellerWidth={10}
+                                fill="rgba(94, 234, 212, 0.12)"
+                                tickFormatter={() => ''}
                             />
                         </LineChart>
                     </ResponsiveContainer>
