@@ -1,0 +1,8 @@
+fastapi
+uvicorn[standard]
+pandas
+numpy
+openpyxl
+puter-python-sdk
+python-dotenv
+python-multipart
